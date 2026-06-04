@@ -1,0 +1,10 @@
+﻿<Solution>
+  <Project Path="MK.Toon.Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="MK.RampCreator.csproj" />
+  <Project Path="MK.Toon.csproj" />
+  <Project Path="Assembly-CSharp-firstpass.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="MK.MKTextureChannelPacker.csproj" />
+  <Project Path="MK.MeshUtility.csproj" />
+</Solution>
