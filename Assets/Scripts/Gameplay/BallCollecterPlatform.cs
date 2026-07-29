@@ -3,13 +3,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
-using DG.Tweening;
 public class BallCollecterPlatform : MonoBehaviour
 {
-    [SerializeField] private TMP_Text collecedStatusText;
-    [SerializeField] private GameObject ballBlocker;
-    [SerializeField] private Renderer upperCubeRenderer;
-    [SerializeField] private Animator myAnim;
+    [SerializeField]  TMP_Text collecedStatusText;
+    [SerializeField]  GameObject ballBlocker;
+    [SerializeField]  Renderer upperCubeRenderer;
+    [SerializeField]  Animator myAnim;
     private List<GameObject> collectedBalls = new List<GameObject>();
     private int collectedCount = 0;
     private int collectLimit = 0;
@@ -36,12 +35,22 @@ public class BallCollecterPlatform : MonoBehaviour
         transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y,
              ((lengthOfRoad) * 5f));
     }
+    private static MaterialPropertyBlock mpb;
+
     public void SetUpperCubeColor(Color newColor)
     {
-        var tempMaterial = new Material(platformMat);
-        tempMaterial.color = newColor;
-        upperCubeRenderer.sharedMaterial = tempMaterial;
+        //MaterialPropertyBlock ile boyuyoruz: yeni materyal uretmeden renk veriyoruz.
+        //_AlbedoColor = MK Toon shader'inin ana renk ozelligi.
+        if (upperCubeRenderer == null)
+            return;
+        if (mpb == null)
+            mpb = new MaterialPropertyBlock();
 
+        upperCubeRenderer.GetPropertyBlock(mpb);
+        mpb.SetColor("_AlbedoColor", newColor);
+        mpb.SetColor("_BaseColor", newColor);
+        mpb.SetColor("_Color", newColor);
+        upperCubeRenderer.SetPropertyBlock(mpb);
     }
     public void CheckCollecterStatus()
     {

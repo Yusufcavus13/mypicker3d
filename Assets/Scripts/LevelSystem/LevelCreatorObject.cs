@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class LevelCreatorObject : MonoBehaviour
 {
@@ -9,6 +11,8 @@ public class LevelCreatorObject : MonoBehaviour
     [SerializeField] private Transform levelsParent;
     private string levelsPath;
 
+#if UNITY_EDITOR
+    //editor-only tool: called from LevelCreatorEditor, never at runtime
     public void CreateNewLevel()
     {
         levelsPath = "Assets/Prefabs/Levels/SavedLevels/Level" + (levelsParent.childCount + 1).ToString() + ".prefab";
@@ -19,4 +23,5 @@ public class LevelCreatorObject : MonoBehaviour
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(newLevel, levelsPath,InteractionMode.AutomatedAction);
     }
+#endif
 }

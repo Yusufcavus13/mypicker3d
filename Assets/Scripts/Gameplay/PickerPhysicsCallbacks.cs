@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿// Picker duyu organı 
 using UnityEngine;
 using System;
 

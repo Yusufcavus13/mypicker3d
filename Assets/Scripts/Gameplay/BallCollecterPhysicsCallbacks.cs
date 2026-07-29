@@ -1,5 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿//Bu da çukurun ağzındaki bir trigger'da duruyor.
+//  Görevi tek: "içime bir top düştü mü?"
 using UnityEngine;
 
 public class BallCollecterPhysicsCallbacks : MonoBehaviour

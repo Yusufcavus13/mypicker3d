@@ -1,10 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
 {
-    [SerializeField] private Transform targetTransform;
+    [SerializeField]  Transform targetTransform;
     [SerializeField] private float followSpeed = 2f;
     private float zOffset = 0f;
     private float targetZPos = 0f;

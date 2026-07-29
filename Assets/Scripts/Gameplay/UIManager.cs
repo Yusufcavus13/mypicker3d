@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,7 +27,7 @@ public class UIManager : MonoBehaviour
     {
         yield return null;
         if (gameManager == null)
-            gameManager = FindFirstObjectByType<GameManager>();
+            gameManager = FindAnyObjectByType<GameManager>();
         gameManager?.StartGame();
     }
 
@@ -66,7 +65,7 @@ public class UIManager : MonoBehaviour
         for (var i = 0; i < 90; i++)
         {
             HideFailStatusImage();
-            yield return null;
+            yield return null;  // animasyonun aktifleştirdiği statusImg bu kod ile kapatılıyor.
         }
     }
     private void OpenWinUI()
