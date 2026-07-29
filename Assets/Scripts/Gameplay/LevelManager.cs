@@ -1,14 +1,13 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 
 public class LevelManager : MonoBehaviour
 {
-    [SerializeField] private GameObject[] levelPrefabs;
-    private int currentLevelIndex;
-    private int nextLevelIndex;
+    [SerializeField] private GameObject levelSkeletonPrefab;
+    [SerializeField] private LevelData[] levels;
+
+    private LevelData currentLevelData;
 
     public static event Action levelLoadedEvent;
     public static LevelManager Instance { get; private set; }
@@ -17,116 +16,120 @@ public class LevelManager : MonoBehaviour
         if (Instance != null && Instance != this)
         {
             Destroy(this);
+            return;
         }
-        else
-        {
-            Instance = this;
-        }
-        //ResetNextLevelIndex();
+
+        Instance = this;
         LoadCurrentLevel();
     }
     private void LoadCurrentLevel()
     {
-        if (levelPrefabs == null || levelPrefabs.Length == 0)
+        if (levelSkeletonPrefab == null || levels == null || levels.Length == 0)
+        {
+            Debug.LogError("[LevelManager] Level iskeleti ya da level listesi bos.", this);
             return;
-
-        currentLevelIndex = PlayerPrefs.GetInt("Level", 0);
-        currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, levelPrefabs.Length - 1);
-        nextLevelIndex = PlayerPrefs.GetInt("NextLevelIndex", 0);
-        nextLevelIndex = Mathf.Clamp(nextLevelIndex, 0, levelPrefabs.Length - 1);
-        int isLevelsSelected = PlayerPrefs.GetInt("IsLevelsSelected", 1); //1 mean selected 0 mean not selected
-
-        if (currentLevelIndex < levelPrefabs.Length - 1) //get both from levels
-        {
-            nextLevelIndex = currentLevelIndex + 1;
-            PlayerPrefs.SetInt("NextLevelIndex", nextLevelIndex);
-        }
-        else if (currentLevelIndex == levelPrefabs.Length - 1) //get next level random 
-        {
-            if (isLevelsSelected == 0)//-1 means we can pick random and assign it
-            {
-                nextLevelIndex = PickNextLevelIndex(currentLevelIndex);
-                PlayerPrefs.SetInt("NextLevelIndex", nextLevelIndex);
-
-                PlayerPrefs.SetInt("IsLevelsSelected", 1);
-            }
-        }
-        else // get current from last random and next from random
-        {
-            if (isLevelsSelected == 0)
-            {
-
-                int lastLevelIndex = PlayerPrefs.GetInt("NextLevelIndex", 0);
-                currentLevelIndex = lastLevelIndex;
-
-                nextLevelIndex = PickNextLevelIndex(currentLevelIndex);
-
-                PlayerPrefs.SetInt("CurrentLevelIndex", currentLevelIndex);
-                PlayerPrefs.SetInt("NextLevelIndex", nextLevelIndex);
-
-                PlayerPrefs.SetInt("IsLevelsSelected", 1);
-            }
-            else
-            {
-
-                currentLevelIndex = PlayerPrefs.GetInt("CurrentLevelIndex", 0);
-                nextLevelIndex = PlayerPrefs.GetInt("NextLevelIndex", 0);
-            }
         }
 
-        //Debug.Log("Level: " + PlayerPrefs.GetInt("Level",0));
-        //Debug.Log("Current Level Index: " + currentLevelIndex + " Next Level Index: " + nextLevelIndex);
-        GameObject currentLevel = Instantiate(levelPrefabs[currentLevelIndex], transform.position,
-            Quaternion.identity, transform);
+        //tasarlanan leveller sirayla oynanir, hepsi bitince rastgele devam eder
+        int completedLevel = PlayerPrefs.GetInt("Level", 0);
+        int currentLevelIndex;
+        int nextLevelIndex;
+
+        if (completedLevel < levels.Length)
+        {
+            currentLevelIndex = completedLevel;
+            nextLevelIndex = completedLevel + 1 < levels.Length
+                ? completedLevel + 1
+                : GetSavedIndex("NextLevelIndex", currentLevelIndex); //son level: sonraki artik rastgele
+        }
+        else
+        {
+            currentLevelIndex = GetSavedIndex("CurrentLevelIndex", -1);
+            nextLevelIndex = GetSavedIndex("NextLevelIndex", currentLevelIndex);
+        }
+
+        for (int i = 0; i < levels.Length; i++)
+        {
+            if (levels[i] == null)
+                Debug.LogError($"[LevelManager] Levels dizisinde {i}. sira BOS. Inspector'dan LevelData ata.", this);
+        }
+
+        currentLevelData = levels[currentLevelIndex];
+        BuildLevel(currentLevelData, transform.position, currentLevelIndex);
 
         Vector3 nextLevelSpawnPos = new Vector3(transform.position.x, transform.position.y,
-            transform.position.z + GetCurrentLevelLength(currentLevel));
-        GameObject nextLevel = Instantiate(levelPrefabs[nextLevelIndex], nextLevelSpawnPos,
-            Quaternion.identity, transform);
+            transform.position.z + GetCurrentLevelLength());
+        BuildLevel(levels[nextLevelIndex], nextLevelSpawnPos, nextLevelIndex);
 
         levelLoadedEvent?.Invoke();
     }
-    public float GetCurrentLevelLength(GameObject curLevelObj)
+    private void BuildLevel(LevelData levelData, Vector3 position, int levelIndex)
     {
-        float curLevelLength = 0f;
-        LevelInfoManager levelInfoManager = curLevelObj.gameObject.GetComponent<LevelInfoManager>();
-        curLevelLength = levelInfoManager.GetLevelLength() + 20;
-        return curLevelLength;
+        if (levelData == null)
+        {
+            Debug.LogError($"[LevelManager] Levels dizisinin {levelIndex}. sirasi bos, level kurulamadi.", this);
+            return;
+        }
+
+        GameObject levelObj = Instantiate(levelSkeletonPrefab, position, Quaternion.identity, transform);
+        levelObj.name = levelData.name;
+
+        LevelBuilder levelBuilder = levelObj.GetComponent<LevelBuilder>();
+        if (levelBuilder == null)
+        {
+            Debug.LogError($"[LevelManager] {levelSkeletonPrefab.name} uzerinde LevelBuilder yok.", this);
+            return;
+        }
+
+        levelBuilder.Build(levelData);
     }
-    public GameObject GetCurrentLevel()
+    public float GetCurrentLevelLength()
     {
-        return transform.GetChild(0).gameObject;
+        return currentLevelData != null ? currentLevelData.GetLevelLength() + 20f : 0f;
     }
     public void ReloadLevel()
     {
         SceneManager.LoadScene(0);
     }
-    private int PickNextLevelIndex(int fromIndex)
+    //rastgele secilen index bir kere secilip kaydedilir: level yeniden
+    //yuklenince (fail/retry) oyuncunun karsisina ayni level cikar
+    private int GetSavedIndex(string key, int avoidIndex)
     {
-        if (levelPrefabs.Length <= 1)
+        if (PlayerPrefs.HasKey(key))
+            return Mathf.Clamp(PlayerPrefs.GetInt(key), 0, levels.Length - 1);
+
+        int index = PickRandomLevelIndex(avoidIndex);
+        PlayerPrefs.SetInt(key, index);
+        return index;
+    }
+    private int PickRandomLevelIndex(int avoidIndex)
+    {
+        if (levels.Length <= 1)
             return 0;
 
-        int next = fromIndex;
-        while (next == fromIndex)
-            next = UnityEngine.Random.Range(0, levelPrefabs.Length);
-        return next;
-    }
-    private void ResetNextLevelIndex()
-    {
-        PlayerPrefs.SetInt("IsLevelsSelected", 0);
+        int index = avoidIndex;
+        while (index == avoidIndex) //ayni level ust uste gelmesin
+            index = UnityEngine.Random.Range(0, levels.Length);
+        return index;
     }
     private void IncreaseLevel()
     {
         PlayerPrefs.SetInt("Level", PlayerPrefs.GetInt("Level", 0) + 1);
+
+        //ileride duran level artik oynanacak level oldu; sonrakini bir sonraki
+        //yuklemede yeniden secmek icin kaydi temizliyoruz
+        if (!PlayerPrefs.HasKey("NextLevelIndex"))
+            return;
+
+        PlayerPrefs.SetInt("CurrentLevelIndex", PlayerPrefs.GetInt("NextLevelIndex"));
+        PlayerPrefs.DeleteKey("NextLevelIndex");
     }
     private void OnEnable()
     {
-        GameManager.gameSuccessedEvent += ResetNextLevelIndex;
         GameManager.gameSuccessedEvent += IncreaseLevel;
     }
     private void OnDisable()
     {
-        GameManager.gameSuccessedEvent -= ResetNextLevelIndex;
         GameManager.gameSuccessedEvent -= IncreaseLevel;
     }
 }

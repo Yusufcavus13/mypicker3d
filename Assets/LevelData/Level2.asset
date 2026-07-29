@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5195a6478f5174fcfb4f8bba32250bae, type: 3}
+  m_Name: Level2
+  m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  stages:
+  - spawnedBallCount: 12
+    targetBallCount: 6
+    platformColor: {r: 0.82484215, g: 1, b: 0, a: 1}
+    platformLength: 4
+  - spawnedBallCount: 15
+    targetBallCount: 9
+    platformColor: {r: 0.827451, g: 1, b: 0, a: 1}
+    platformLength: 4

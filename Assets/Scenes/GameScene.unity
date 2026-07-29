@@ -1130,6 +1130,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelPrefabs:
   - {fileID: 1169397084924390200, guid: 3d170e38cad8213488d3edbc430ec0ba, type: 3}
+  - {fileID: 6054407098870905235, guid: 4f4e1ca2a6d584abebcece0bc7232907, type: 3}
+  - {fileID: 52780046969652462, guid: eb717993bac264f0eaf4701ea1dd188f, type: 3}
+  - {fileID: 5239596133376175198, guid: da2e0806a1da04004be6af06a11473d2, type: 3}
+  - {fileID: 7525301302419092042, guid: d4ae3f6bbfe6640ef9ab90156165c2f8, type: 3}
 --- !u!1 &617854284
 GameObject:
   m_ObjectHideFlags: 0
@@ -2737,6 +2741,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1938224988}
+  - component: {fileID: 1938224989}
   m_Layer: 0
   m_Name: Sounds
   m_TagString: Untagged
@@ -2762,6 +2767,24 @@ Transform:
   - {fileID: 1649844100}
   m_Father: {fileID: 1687258585}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1938224989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938224987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 761ba18b3f5204e578316dbb41b22f7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SoundManager
+  popSources:
+  - {fileID: 463633707}
+  - {fileID: 635426910}
+  - {fileID: 1649844099}
+  minPitch: 0.9
+  maxPitch: 1.1
 --- !u!1 &2007959522
 GameObject:
   m_ObjectHideFlags: 0
@@ -2882,6 +2905,7 @@ MonoBehaviour:
   myRb: {fileID: 2039793845}
   horiztontalSpeed: 100
   verticalSpeed: 5
+  dragSensitivity: 4
 --- !u!54 &2039793845
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -3222,6 +3246,8 @@ GameObject:
   - component: {fileID: 543450653027542160}
   - component: {fileID: 3469287836810095413}
   - component: {fileID: 1711813856306061311}
+  - component: {fileID: 3469287836810095414}
+  - component: {fileID: 3469287836810095415}
   m_Layer: 0
   m_Name: PickerModel
   m_TagString: Untagged
@@ -3286,6 +3312,41 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 919132148753595946}
   m_Mesh: {fileID: -5495902117074765545, guid: 317e3c50b9926f1448631475f5caddf8, type: 3}
+--- !u!95 &3469287836810095414
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 919132148753595946}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 215eab70abd4d4581aeef01a9d0d02f3, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3469287836810095415
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 919132148753595946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d87a316a556c644029acee1bfd8f84ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PickerAnimation
+  myAnim: {fileID: 3469287836810095414}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
