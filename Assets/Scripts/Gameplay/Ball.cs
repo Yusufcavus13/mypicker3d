@@ -1,13 +1,12 @@
-﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Ball : MonoBehaviour
 {
     [SerializeField] private GameObject explosionEfectPrefab;
-    [SerializeField] private Renderer myRenderer;
     [SerializeField] private Rigidbody myRb;
-    private bool isInside=false;
+    [SerializeField] private float forcePower = 7f;
+    [SerializeField] private float upwardRatio = 3f; //ileri bilesene gore yukari bilesen
+    private bool isInside = false;
 
     public void SetStatus(bool _isInside)
     {
@@ -34,6 +33,8 @@ public class Ball : MonoBehaviour
             Destroy(spawnedEffectObj, 3f);
         }
 
+        SoundManager.Instance?.PlayPop();
+
         Destroy(gameObject);
     }
     private void CheckIsInside()
@@ -45,13 +46,14 @@ public class Ball : MonoBehaviour
     }
     private void ThrowForward()
     {
-        Vector3 forceDirection = (transform.position + new Vector3(transform.position.x,
-            transform.position.y +15f,transform.position.z+5f)).normalized;
+        //yukari-ileri kavis: toplayicinin kenarina takilmadan icine dussun
+        Vector3 forceDirection = (Vector3.up * upwardRatio + Vector3.forward).normalized;
+
         myRb.linearVelocity = Vector3.zero;
         myRb.angularVelocity = Vector3.zero;
-        myRb.AddForce(forceDirection*300);
+        myRb.AddForce(forceDirection * forcePower, ForceMode.Impulse);
     }
-   
+
     private void OnEnable()
     {
         PickerPhysicsCallbacks.hittedBallCollecterEvent += CheckIsInside;
