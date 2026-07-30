@@ -12,6 +12,7 @@ public class Stage : MonoBehaviour
     [SerializeField] private float platformLength=1;
     [SerializeField] private int bigBallCount=0;
     [SerializeField] private float ballSpreadWidth=0f;
+    [SerializeField] private int obstacleCount=0;
 
     [SerializeField] private BallCollecterPlatform ballCollecterPlatform;
     [SerializeField] private RoadPlatform roadPlatform;
@@ -55,6 +56,7 @@ public class Stage : MonoBehaviour
         platformLength = data.platformLength;
         bigBallCount = data.bigBallCount;
         ballSpreadWidth = data.ballSpreadWidth;
+        obstacleCount = data.obstacleCount;
 
         SetupStage();
 
@@ -68,7 +70,7 @@ public class Stage : MonoBehaviour
         ballCollecterPlatform.SetPosition(platformLength);
         ballCollecterPlatform.SetUpperCubeColor(platformColor);
         roadPlatform.SetPlatformColor(platformColor);
-        roadPlatform.SpawnBalls(spawnedBallCount, bigBallCount, ballSpreadWidth);
+        roadPlatform.SpawnBalls(spawnedBallCount, bigBallCount, ballSpreadWidth, obstacleCount);
         ballCollecterPlatform.SetCollectedText("0 / " + targetBallCount.ToString());
         
     }

@@ -13,6 +13,15 @@ public class PickerMovement : MonoBehaviour
     //Oyunun zorlugunu belirleyen asil ayar bu.
     //DIKKAT: RoadPlatform'daki pickerLateralSpeed ile ayni olmali.
     [SerializeField] private float maxLateralSpeed = 9f;
+
+    [Header("Engel carpismasi")]
+    //Picker'in Rigidbody'si kinematic, yani hicbir collider onu durduramaz.
+    //O yuzden ilerlemeden ONCE onunu tariyoruz ve engel varsa ileri hareketi
+    //kesiyoruz. Deterministik kaliyor, fizige birakmadan.
+    [SerializeField] private Vector3 blockCheckSize = new Vector3(1.9f, 1f, 0.4f);
+    [SerializeField] private float blockCheckForwardOffset = 0.9f;
+
+    private readonly Collider[] blockBuffer = new Collider[8];
     public static event Action movedToNextStartEvent;
 
     private bool canMove = false;
@@ -58,12 +67,36 @@ public class PickerMovement : MonoBehaviour
 
         float verticalMove = canRun ? verticalSpeed * Time.fixedDeltaTime : 0f;
 
+        // Engel varsa ileri gitme; oyuncu yana kayarak bosluga gecmek zorunda
+        if (verticalMove > 0f && IsObstacleAhead(myRb.position, horizontalMove))
+            verticalMove = 0f;
+
         Vector3 pos = myRb.position;     // transform.position DEĞİL
         myRb.MovePosition(new Vector3(
             Mathf.Clamp(pos.x + horizontalMove, -1.5f, 1.5f),
             pos.y,
             pos.z + verticalMove));
     }
+    //Picker'in hemen onunde engel var mi? OverlapBoxNonAlloc kullaniyoruz:
+    //onceden ayrilmis tampon sayesinde her karede cop uretmiyor.
+    private bool IsObstacleAhead(Vector3 position, float horizontalMove)
+    {
+        //yana kaymayi da hesaba katiyoruz, yoksa bosluga girerken kendini bloke ediyor
+        Vector3 center = position + new Vector3(horizontalMove, 0f, blockCheckForwardOffset);
+
+        int count = Physics.OverlapBoxNonAlloc(center, blockCheckSize * 0.5f, blockBuffer,
+            Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (blockBuffer[i] == null)
+                continue;
+            if (blockBuffer[i].GetComponentInParent<Obstacle>() != null)
+                return true;
+        }
+        return false;
+    }
+
     private void EnableMovement()
     {
         canMove = true;

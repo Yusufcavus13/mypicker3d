@@ -19,9 +19,11 @@ MonoBehaviour:
     platformLength: 4
     bigBallCount: 0
     ballSpreadWidth: 3.6
+    obstacleCount: 0
   - spawnedBallCount: 15
     targetBallCount: 14
     platformColor: {r: 0.827451, g: 1, b: 0, a: 1}
     platformLength: 4
     bigBallCount: 1
     ballSpreadWidth: 3.8
+    obstacleCount: 1

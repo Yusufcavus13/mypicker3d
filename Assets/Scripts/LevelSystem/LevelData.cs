@@ -18,6 +18,10 @@ public class StageData
     //Picker en fazla 2.26'ya uzanabildigi icin 4.5'ten buyuk vermek, bazi
     //toplarin hic toplanamamasi anlamina gelir - zorluk ayari tam olarak burada.
     public float ballSpreadWidth = 0f;
+
+    //Yola kac engel konacak. Engeller duvara yaslanir, picker acik taraftan
+    //dolanmak zorunda kalir - yani top toplama cizgisini bozmak zorunda.
+    public int obstacleCount = 0;
 }
 
 [CreateAssetMenu(fileName = "NewLevel", menuName = "Picker3D/Level Data")]

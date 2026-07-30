@@ -35,10 +35,37 @@ public class RoadPlatform : MonoBehaviour
         public bool isBig;
     }
 
+    [Header("Engeller")]
+    [SerializeField] private GameObject obstaclePrefab;
+    [SerializeField] private Transform obstaclesParent;
+    [SerializeField] private float obstacleWidth = 1.6f;
+    [SerializeField] private float obstacleHeight = 1.2f;
+    //Duvarlar x = +-2.443'te ve 0.1 kalinliginda. Bu pay olmadan engelin dis
+    //kenari duvarin icine giriyor ve gomulu gorunuyor.
+    [SerializeField] private float obstacleWallInset = 0.2f;
+    //Picker'in yarim genisligi (kollar +-0.95). Engelin yanindan gecebilmesi
+    //icin gereken bosluk bununla hesaplaniyor.
+    [SerializeField] private float pickerHalfWidth = 0.95f;
+
     private struct BallGroup
     {
         public int size;
         public bool isBig;
+    }
+
+    //Yolda sirayla gelen duraklar: ya bir top kumesi ya bir engel.
+    //Ikisi ayni zincirde, cunku picker ikisinin arasinda da yol almak zorunda.
+    private struct SlotItem
+    {
+        public bool isObstacle;
+        public bool obstacleOnLeft;
+        public BallGroup group;
+    }
+
+    private struct ObstaclePlacement
+    {
+        public float centerX;
+        public float localZ;
     }
 
     private static MaterialPropertyBlock mpb;
@@ -68,7 +95,7 @@ public class RoadPlatform : MonoBehaviour
              transform.localPosition.z + ((platformLength - 1f) * 2.5f));
 
     }
-    public void SpawnBalls(int amount, int bigBallCount, float spreadWidthOverride)
+    public void SpawnBalls(int amount, int bigBallCount, float spreadWidthOverride, int obstacleCount)
     {
         //BallParent'i yolun merkezine hizaliyoruz; toplar bundan sonra LOCAL
         //konumla yerlestiriliyor, yani dunya koordinatina hic bakmiyoruz.
@@ -81,7 +108,10 @@ public class RoadPlatform : MonoBehaviour
             ballsParent.GetChild(i).gameObject.SetActive(false);
         }
 
-        List<BallPlacement> placements = BuildBallPositions(amount, bigBallCount, spreadWidthOverride);
+        List<ObstaclePlacement> obstacles = new List<ObstaclePlacement>();
+        List<BallPlacement> placements = BuildBallPositions(amount, bigBallCount, spreadWidthOverride,
+            obstacleCount, obstacles);
+        SpawnObstacles(obstacles);
 
         for (int i = 0; i < placements.Count; i++)
         {
@@ -139,6 +169,82 @@ public class RoadPlatform : MonoBehaviour
         ballRb.angularVelocity = Vector3.zero;
     }
 
+    private void SpawnObstacles(List<ObstaclePlacement> obstacles)
+    {
+        if (obstaclePrefab == null)
+        {
+            if (obstacles.Count > 0)
+                Debug.LogWarning($"[RoadPlatform] {name}: obstaclePrefab bagli degil, engeller atlandi.", this);
+            return;
+        }
+
+        Transform parent = GetObstaclesParent();
+
+        //BallParent gibi yolun merkezine hizaliyoruz; y'yi 0 birakiyoruz ki
+        //engelin local y'si dogrudan yuzey yuksekligi olsun
+        parent.localPosition = new Vector3(myRoadTransform.localPosition.x, 0f,
+            myRoadTransform.localPosition.z);
+
+        //havuz disiplini: once hepsini kapat
+        for (int i = 0; i < parent.childCount; i++)
+            parent.GetChild(i).gameObject.SetActive(false);
+
+        //engeller yolun yuzeyine oturmali: Road'un y'si + kupun yariyuksekligi
+        float cubeHeight = platformRenderer != null ? platformRenderer.transform.localScale.y : 1f;
+        float surfaceY = myRoadTransform.localPosition.y
+            + (myRoadTransform.localScale.y * cubeHeight * 0.5f);
+
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            Transform obstacleTransform;
+            if (i < parent.childCount)
+            {
+                obstacleTransform = parent.GetChild(i);
+                obstacleTransform.gameObject.SetActive(true);
+            }
+            else
+            {
+#if UNITY_EDITOR
+                GameObject spawned = Application.isPlaying
+                    ? Instantiate(obstaclePrefab)
+                    : (GameObject)PrefabUtility.InstantiatePrefab(obstaclePrefab);
+#else
+                GameObject spawned = Instantiate(obstaclePrefab);
+#endif
+                spawned.transform.SetParent(parent, false);
+                obstacleTransform = spawned.transform;
+            }
+
+            if (!obstacleTransform.TryGetComponent(out Obstacle obstacle))
+            {
+                Debug.LogError($"[RoadPlatform] {obstaclePrefab.name} uzerinde Obstacle bileseni yok.", this);
+                return;
+            }
+
+            obstacle.Configure(obstacles[i].centerX, obstacles[i].localZ, surfaceY,
+                obstacleWidth, obstacleHeight);
+        }
+    }
+
+    //Prefaba yeni bir cocuk eklemek zorunda kalmamak icin gerekirse kendimiz uretiyoruz.
+    private Transform GetObstaclesParent()
+    {
+        if (obstaclesParent != null)
+            return obstaclesParent;
+
+        Transform existing = transform.Find("ObstaclesParent");
+        if (existing != null)
+        {
+            obstaclesParent = existing;
+            return obstaclesParent;
+        }
+
+        GameObject created = new GameObject("ObstaclesParent");
+        created.transform.SetParent(transform, false);
+        obstaclesParent = created.transform;
+        return obstaclesParent;
+    }
+
     //Topun rengini MaterialPropertyBlock ile veriyoruz: yeni materyal uretmeden,
     //tek tek topa ozel renk. Platformlarda da ayni yontem kullaniliyor.
     private void SetBallColor(Transform ball, Color color)
@@ -159,7 +265,8 @@ public class RoadPlatform : MonoBehaviour
     //Toplari 2-5'lik kucuk kumelere bolup yol boyunca serpiyoruz. Her kume
     //rastgele bir sekil (dik dizi, yan dizi, kucuk blok) ve rastgele bir yan
     //konum aliyor; boylece her level farkli bir dagilimla cikiyor.
-    private List<BallPlacement> BuildBallPositions(int amount, int bigBallCount, float spreadWidthOverride)
+    private List<BallPlacement> BuildBallPositions(int amount, int bigBallCount, float spreadWidthOverride,
+        int obstacleCount, List<ObstaclePlacement> obstacleResults)
     {
         List<BallPlacement> positions = new List<BallPlacement>(Mathf.Max(0, amount));
         if (amount <= 0)
@@ -176,18 +283,27 @@ public class RoadPlatform : MonoBehaviour
         float halfSpread = Mathf.Min(spread * 0.5f, Mathf.Max(0f, (roadSize.x * 0.5f) - ballEdgeMargin));
         float halfLength = Mathf.Max(0f, (roadSize.y * 0.5f) - ballAreaPadding) * Mathf.Clamp01(ballPackingFactor);
 
-        List<BallGroup> groups = SplitIntoGroups(amount, bigRemaining);
+        List<SlotItem> slots = BuildSlots(amount, bigRemaining, obstacleCount);
 
-        //her kumeye yol boyunca esit bir dilim ayirip dilimin icinde oynatiyoruz
-        float slot = (halfLength * 2f) / groups.Count;
+        //her durak yol boyunca esit bir dilim aliyor; engeller de kendi diliminde
+        float slot = (halfLength * 2f) / slots.Count;
         float baseDiameter = ballPrefab != null ? ballPrefab.transform.localScale.x : 0.3f;
 
         float previousCenterX = 0f;
         float previousCenterZ = -halfLength - (pickerForwardSpeed * 0.5f); //picker yola girmeden once ortada
 
-        for (int g = 0; g < groups.Count; g++)
+        for (int g = 0; g < slots.Count; g++)
         {
-            BallGroup group = groups[g];
+            float itemSlotCenter = -halfLength + (slot * (g + 0.5f));
+
+            if (slots[g].isObstacle)
+            {
+                PlaceObstacleSlot(slots[g].obstacleOnLeft, itemSlotCenter, roadSize,
+                    ref previousCenterX, ref previousCenterZ, obstacleResults);
+                continue;
+            }
+
+            BallGroup group = slots[g].group;
             int size = group.size;
 
             //bu kumedeki toplarin capi: buyuk toplar cok daha genis yer kapliyor
@@ -211,7 +327,7 @@ public class RoadPlatform : MonoBehaviour
             float limitX = Mathf.Max(0f, halfSpread - groupHalfWidth - ballRadius);
 
             //dilimin kenarinda topun yaricapi kadar pay: yan yana dusen kumeler carpismasin
-            float slotCenter = -halfLength + (slot * (g + 0.5f));
+            float slotCenter = itemSlotCenter;
             float slotPlay = Mathf.Max(0f, (slot * 0.5f) - groupHalfDepth - ballRadius);
             float limitZ = Mathf.Max(0f, halfLength - groupHalfDepth - ballRadius);
             float centerZ = Mathf.Clamp(slotCenter + Random.Range(-slotPlay, slotPlay), -limitZ, limitZ);
@@ -260,6 +376,91 @@ public class RoadPlatform : MonoBehaviour
         Vector3 roadScale = myRoadTransform.localScale;
 
         return new Vector2(cubeScale.x * roadScale.x, cubeScale.z * roadScale.z);
+    }
+
+    //Engeli duvara yasliyoruz, geciş boslugu acik tarafta kaliyor. Boslugun
+    //ORTASI picker'in gidebilecegi bir x olmak zorunda, yoksa level kilitlenir.
+    //Ayrica bu boslugu erisilebilirlik zincirine bir durak olarak ekliyoruz:
+    //picker onceki kumeden buraya, buradan sonraki kumeye yetismek zorunda.
+    private void PlaceObstacleSlot(bool onLeft, float slotCenterZ, Vector2 roadSize,
+        ref float previousCenterX, ref float previousCenterZ, List<ObstaclePlacement> results)
+    {
+        //duvarin ic yuzu: engel buraya yaslanacak, icine gommeyecek
+        float roadHalfWidth = (roadSize.x * 0.5f) - obstacleWallInset;
+        float width = Mathf.Min(obstacleWidth, Mathf.Max(0.2f, (roadHalfWidth * 2f) - (pickerHalfWidth * 2f) - 0.2f));
+
+        //duvara yasli engelin ic kenari
+        float innerEdge = onLeft ? -roadHalfWidth + width : roadHalfWidth - width;
+
+        //picker'in merkezi bu araliktan gecebilir
+        float gapMin = onLeft ? innerEdge + pickerHalfWidth : -pickerLaneLimit;
+        float gapMax = onLeft ? pickerLaneLimit : innerEdge - pickerHalfWidth;
+        gapMin = Mathf.Max(gapMin, -pickerLaneLimit);
+        gapMax = Mathf.Min(gapMax, pickerLaneLimit);
+
+        //Bosluk kapaniyorsa engel bu yola sigmiyor: hic koymuyoruz.
+        //Sessizce gecmek yerine kaydediyorum ki tasarimda fark edilsin.
+        if (gapMin > gapMax)
+        {
+            Debug.LogWarning($"[RoadPlatform] {name}: engel yola sigmadi (genislik {width:F2}), atlandi.", this);
+            return;
+        }
+
+        //picker onceki duraktan buraya ne kadar yana gidebilir
+        float forwardGap = Mathf.Max(0.01f, slotCenterZ - previousCenterZ);
+        float travelWindow = pickerLateralSpeed * (forwardGap / Mathf.Max(0.01f, pickerForwardSpeed));
+
+        float reachMin = Mathf.Max(gapMin, previousCenterX - travelWindow);
+        float reachMax = Mathf.Min(gapMax, previousCenterX + travelWindow);
+
+        //Yetisemiyorsa bosluga en yakin noktayi hedefliyoruz; engel yine de
+        //gecilebilir kalsin diye bosluk araligindan disari cikmiyoruz.
+        float passX = reachMin <= reachMax
+            ? Random.Range(reachMin, reachMax)
+            : Mathf.Clamp(previousCenterX, gapMin, gapMax);
+
+        results.Add(new ObstaclePlacement
+        {
+            centerX = onLeft ? -roadHalfWidth + (width * 0.5f) : roadHalfWidth - (width * 0.5f),
+            localZ = slotCenterZ
+        });
+
+        //zincir bu bosluktan devam ediyor
+        previousCenterX = passX;
+        previousCenterZ = slotCenterZ;
+    }
+
+    //Picker x ekseninde -1.5 / +1.5 arasinda hareket ediyor (PickerMovement'taki clamp).
+    private const float pickerLaneLimit = 1.5f;
+
+    //Duraklari hazirla: top kumeleri + engeller, karisik sirada.
+    private List<SlotItem> BuildSlots(int amount, int bigBallCount, int obstacleCount)
+    {
+        List<SlotItem> slots = new List<SlotItem>();
+
+        foreach (BallGroup group in SplitIntoGroups(amount, bigBallCount))
+            slots.Add(new SlotItem { isObstacle = false, group = group });
+
+        //engeller donusumlu olarak sag/sol duvara yaslanir
+        int obstacles = Mathf.Max(0, obstacleCount);
+        for (int i = 0; i < obstacles; i++)
+            slots.Add(new SlotItem { isObstacle = true, obstacleOnLeft = i % 2 == 0 });
+
+        //Engelleri araya serpiyoruz. Ilk durak engel olmasin: picker yola
+        //girer girmez duvara tosladigini hissetmesin.
+        for (int i = slots.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (slots[i], slots[j]) = (slots[j], slots[i]);
+        }
+        for (int i = 1; i < slots.Count; i++)
+        {
+            if (!slots[0].isObstacle)
+                break;
+            (slots[0], slots[i]) = (slots[i], slots[0]);
+        }
+
+        return slots;
     }
 
     //Buyuk toplar KENDI BASINA kume oluyor: 2.2 kat buyuk olduklari icin baska
