@@ -12,15 +12,40 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Text levelText;
     [SerializeField] private GameManager gameManager;
 
+    //Sahne basarisizlikta yeniden yukleniyor. Ana menu her yuklemede degil,
+    //sadece uygulama ilk acildiginda cikmali - static alan sahne yuklemeleri
+    //arasinda yasadigi icin bayrak gorevi goruyor.
+    private static bool mainMenuShown;
+
     private void Start()
     {
-        mainMenu.SetActive(false);
         gameEndMenu.SetActive(false);
         winMenu.SetActive(false);
         failMenu.SetActive(false);
-        gameMenu.SetActive(true);
+
         UpdateLevelText();
-        StartCoroutine(BeginGameNextFrame());
+
+        if (mainMenuShown)
+        {
+            mainMenu.SetActive(false);
+            gameMenu.SetActive(true);
+            StartCoroutine(BeginGameNextFrame());
+            return;
+        }
+
+        mainMenuShown = true;
+        ShowMainMenu();
+    }
+
+    //Sahnede MainMenu'nun cocuklari da kapali kaydedilmis; sadece parent'i
+    //acmak yetmiyor, hepsini aciyoruz.
+    private void ShowMainMenu()
+    {
+        gameMenu.SetActive(false);
+        mainMenu.SetActive(true);
+
+        foreach (Transform child in mainMenu.transform)
+            child.gameObject.SetActive(true);
     }
 
     private IEnumerator BeginGameNextFrame()
@@ -42,6 +67,13 @@ public class UIManager : MonoBehaviour
         gameMenu.SetActive(false);
         gameEndMenu.SetActive(true);
     }
+
+    //Level bitti ama oyun devam ediyor: menu ACMIYORUZ, sadece sayaci guncelliyoruz.
+    private void OnLevelCompleted()
+    {
+        UpdateLevelText();
+    }
+
     private void OpenFailUI()
     {
         gameEndMenu.SetActive(true);
@@ -68,11 +100,6 @@ public class UIManager : MonoBehaviour
             yield return null;  // animasyonun aktifleştirdiği statusImg bu kod ile kapatılıyor.
         }
     }
-    private void OpenWinUI()
-    {
-        gameEndMenu.SetActive(true);
-        winMenu.SetActive(true);
-    }
     private void UpdateLevelText()
     {
         levelText.text = "Level " + (PlayerPrefs.GetInt("Level",0)+1).ToString();
@@ -82,13 +109,13 @@ public class UIManager : MonoBehaviour
         GameManager.gameStartedEvent += OpenGameUI;
         GameManager.gameFinishedEvent += CloseGameUI;
         GameManager.gameFailedEvent += OpenFailUI;
-        GameManager.gameSuccessedEvent += OpenWinUI;
+        GameManager.levelCompletedEvent += OnLevelCompleted;
     }
     private void OnDisable()
     {
         GameManager.gameStartedEvent -= OpenGameUI;
         GameManager.gameFinishedEvent -= CloseGameUI;
         GameManager.gameFailedEvent -= OpenFailUI;
-        GameManager.gameSuccessedEvent -= OpenWinUI;
+        GameManager.levelCompletedEvent -= OnLevelCompleted;
     }
 }

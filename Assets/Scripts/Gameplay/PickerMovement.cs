@@ -118,17 +118,30 @@ public class PickerMovement : MonoBehaviour
     private void MoveToNextLevelStartPos()
     {
         DisableMovement();
-        float curLevellength = LevelManager.Instance.GetCurrentLevelLength();
-        Vector3 targetPos = new Vector3(0, transform.position.y, curLevellength-10f);
-        transform.DOMove(targetPos, 2f).OnComplete(() =>
-        {
-            movedToNextStartEvent?.Invoke();
-        });
+
+        //Leveller artik 0'dan baslamiyor; hedefi LevelManager veriyor.
+        Vector3 targetPos = new Vector3(0f, transform.position.y,
+            LevelManager.Instance.GetNextLevelStartZ());
+
+        transform.DOMove(targetPos, 2f).OnComplete(OnArrivedAtNextLevel);
+    }
+
+    private void OnArrivedAtNextLevel()
+    {
+        //DOTween transform'u tasidi ama Rigidbody'nin kendi pozu ayri tutuluyor.
+        //Hizalamazsak fizik bir sonraki adimda picker'i eski yerine geri cekiyor.
+        myRb.position = transform.position;
+        myRb.rotation = transform.rotation;
+        Physics.SyncTransforms();
+
+        movedToNextStartEvent?.Invoke();
     }
     private void OnEnable()
     {
         GameManager.gameStartedEvent += EnableMovement;
         GameManager.gameFinishedEvent += DisableMovement;
+        //level bitti ama oyun devam ediyor: yeni levelde kosmaya devam
+        GameManager.levelCompletedEvent += EnableMovement;
         PickerPhysicsCallbacks.hittedBallCollecterEvent += DisableVerticalMovement;
         PickerPhysicsCallbacks.hittedLevelEndEvent += MoveToNextLevelStartPos;
         BallCollecterPlatform.collecterSuccessEvent += EnableVerticalMovement;
@@ -137,6 +150,7 @@ public class PickerMovement : MonoBehaviour
     {
         GameManager.gameStartedEvent -= EnableMovement;
         GameManager.gameFinishedEvent -= DisableMovement;
+        GameManager.levelCompletedEvent -= EnableMovement;
         PickerPhysicsCallbacks.hittedBallCollecterEvent -= DisableVerticalMovement;
         PickerPhysicsCallbacks.hittedLevelEndEvent -= MoveToNextLevelStartPos;
         BallCollecterPlatform.collecterSuccessEvent -= EnableVerticalMovement;

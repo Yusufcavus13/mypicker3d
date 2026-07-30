@@ -5,19 +5,24 @@ using System;
 public class GameManager : MonoBehaviour
 {
     public static event Action gameStartedEvent;
+
+    //Oyunu DURDURAN olay. Artik sadece basarisizlikta ateslenir; level
+    //tamamlaninca oyun devam ettigi icin burada isi yok.
     public static event Action gameFinishedEvent;
-    public static event Action gameSuccessedEvent;
+
+    //Level bitti ama oyun devam ediyor: LevelManager siradakini kurar,
+    //picker yoluna devam eder.
+    public static event Action levelCompletedEvent;
+
     public static event Action gameFailedEvent;
 
     public void StartGame()
     {
         gameStartedEvent?.Invoke();
     }
-    public void GameSuccessed()
+    public void LevelCompleted()
     {
-        
-        gameSuccessedEvent?.Invoke();
-        gameFinishedEvent?.Invoke();  
+        levelCompletedEvent?.Invoke();
     }
     public void GameFailed()
     {
@@ -27,11 +32,11 @@ public class GameManager : MonoBehaviour
     private void OnEnable()
     {
         BallCollecterPlatform.collecterFailedEvent += GameFailed;
-        PickerMovement.movedToNextStartEvent += GameSuccessed;
+        PickerMovement.movedToNextStartEvent += LevelCompleted;
     }
     private void OnDisable()
     {
         BallCollecterPlatform.collecterFailedEvent -= GameFailed;
-        PickerMovement.movedToNextStartEvent -= GameSuccessed;
+        PickerMovement.movedToNextStartEvent -= LevelCompleted;
     }
 }

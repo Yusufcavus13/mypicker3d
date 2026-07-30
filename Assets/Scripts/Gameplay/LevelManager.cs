@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 
@@ -8,9 +8,20 @@ public class LevelManager : MonoBehaviour
     [SerializeField] private LevelData[] levels;
 
     private LevelData currentLevelData;
+    private LevelData nextLevelData;
+    private GameObject currentLevelObject;
+    private GameObject nextLevelObject;
+    private int currentLevelIndex;
+    private int nextLevelIndex;
+
+    //Leveller artik hep 0'dan baslamiyor: kesintisiz gecisde her level bir
+    //oncekinin bittigi yerde kuruluyor, o yuzden mevcut levelin baslangicini
+    //akilda tutmak zorundayiz.
+    private float currentLevelOriginZ;
 
     public static event Action levelLoadedEvent;
     public static LevelManager Instance { get; private set; }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -30,62 +41,110 @@ public class LevelManager : MonoBehaviour
             return;
         }
 
-        //tasarlanan leveller sirayla oynanir, hepsi bitince rastgele devam eder
-        int completedLevel = PlayerPrefs.GetInt("Level", 0);
-        int currentLevelIndex;
-        int nextLevelIndex;
-
-        if (completedLevel < levels.Length)
-        {
-            currentLevelIndex = completedLevel;
-            nextLevelIndex = completedLevel + 1 < levels.Length
-                ? completedLevel + 1
-                : GetSavedIndex("NextLevelIndex", currentLevelIndex); //son level: sonraki artik rastgele
-        }
-        else
-        {
-            currentLevelIndex = GetSavedIndex("CurrentLevelIndex", -1);
-            nextLevelIndex = GetSavedIndex("NextLevelIndex", currentLevelIndex);
-        }
-
         for (int i = 0; i < levels.Length; i++)
         {
             if (levels[i] == null)
                 Debug.LogError($"[LevelManager] Levels dizisinde {i}. sira BOS. Inspector'dan LevelData ata.", this);
         }
 
+        ResolveIndices(out currentLevelIndex, out nextLevelIndex);
         currentLevelData = levels[currentLevelIndex];
-        BuildLevel(currentLevelData, transform.position, currentLevelIndex);
+        nextLevelData = levels[nextLevelIndex];
 
-        Vector3 nextLevelSpawnPos = new Vector3(transform.position.x, transform.position.y,
-            transform.position.z + GetCurrentLevelLength());
-        BuildLevel(levels[nextLevelIndex], nextLevelSpawnPos, nextLevelIndex);
+        currentLevelOriginZ = transform.position.z;
+        currentLevelObject = BuildLevel(currentLevelData, currentLevelOriginZ, currentLevelIndex);
+        nextLevelObject = BuildLevel(nextLevelData, GetNextLevelOriginZ(), nextLevelIndex);
 
         levelLoadedEvent?.Invoke();
     }
-    private void BuildLevel(LevelData levelData, Vector3 position, int levelIndex)
+
+    //Hangi level oynaniyor, hangisi sirada: tasarlanan leveller sirayla,
+    //hepsi bitince rastgele devam eder.
+    private void ResolveIndices(out int current, out int next)
+    {
+        int completedLevel = PlayerPrefs.GetInt("Level", 0);
+
+        if (completedLevel < levels.Length)
+        {
+            current = completedLevel;
+            next = completedLevel + 1 < levels.Length
+                ? completedLevel + 1
+                : GetSavedIndex("NextLevelIndex", current);
+        }
+        else
+        {
+            current = GetSavedIndex("CurrentLevelIndex", -1);
+            next = GetSavedIndex("NextLevelIndex", current);
+        }
+    }
+
+    private GameObject BuildLevel(LevelData levelData, float originZ, int levelIndex)
     {
         if (levelData == null)
         {
             Debug.LogError($"[LevelManager] Levels dizisinin {levelIndex}. sirasi bos, level kurulamadi.", this);
-            return;
+            return null;
         }
 
+        Vector3 position = new Vector3(transform.position.x, transform.position.y, originZ);
         GameObject levelObj = Instantiate(levelSkeletonPrefab, position, Quaternion.identity, transform);
         levelObj.name = levelData.name;
 
         if (!levelObj.TryGetComponent(out LevelBuilder levelBuilder))
         {
             Debug.LogError($"[LevelManager] {levelSkeletonPrefab.name} uzerinde LevelBuilder yok.", this);
-            return;
+            return levelObj;
         }
 
         levelBuilder.Build(levelData);
+        return levelObj;
     }
+
+    //Level bitti: sahneyi yeniden yuklemeden siradakine geciyoruz.
+    private void OnLevelCompleted()
+    {
+        IncreaseLevel();
+        AdvanceToNextLevel();
+    }
+
+    private void AdvanceToNextLevel()
+    {
+        //DIKKAT: yeni baslangic ESKI levelin uzunluguna gore hesaplanir,
+        //o yuzden currentLevelData'yi degistirmeden once aliyoruz.
+        float newOriginZ = GetNextLevelOriginZ();
+
+        if (currentLevelObject != null)
+            Destroy(currentLevelObject);
+
+        currentLevelOriginZ = newOriginZ;
+        currentLevelData = nextLevelData;
+        currentLevelObject = nextLevelObject;
+        currentLevelIndex = nextLevelIndex;
+
+        ResolveIndices(out _, out nextLevelIndex);
+        nextLevelData = levels[nextLevelIndex];
+        nextLevelObject = BuildLevel(nextLevelData, GetNextLevelOriginZ(), nextLevelIndex);
+
+        levelLoadedEvent?.Invoke();
+    }
+
     public float GetCurrentLevelLength()
     {
         return currentLevelData != null ? currentLevelData.GetLevelLength() + 20f : 0f;
     }
+
+    //Siradaki levelin baslangic noktasi (dunya z)
+    public float GetNextLevelOriginZ()
+    {
+        return currentLevelOriginZ + GetCurrentLevelLength();
+    }
+
+    //Picker'in level sonunda gidecegi nokta: siradaki levelin baslangic yolu
+    public float GetNextLevelStartZ()
+    {
+        return GetNextLevelOriginZ() - 10f;
+    }
+
     public void ReloadLevel()
     {
         SceneManager.LoadScene(0);
@@ -125,10 +184,10 @@ public class LevelManager : MonoBehaviour
     }
     private void OnEnable()
     {
-        GameManager.gameSuccessedEvent += IncreaseLevel;
+        GameManager.levelCompletedEvent += OnLevelCompleted;
     }
     private void OnDisable()
     {
-        GameManager.gameSuccessedEvent -= IncreaseLevel;
+        GameManager.levelCompletedEvent -= OnLevelCompleted;
     }
 }
