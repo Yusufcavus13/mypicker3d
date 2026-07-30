@@ -39,3 +39,7 @@ sysinfo.txt
 [Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/**/assetDatabase*.bin
 [Aa]ssets/[Ss]treamingAssets/aa.meta
 [Aa]ssets/[Ss]treamingAssets/aa/**
+
+# Unity cokme kurtarma kopyalari
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta

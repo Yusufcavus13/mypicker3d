@@ -52,5 +52,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "mypicker3d.slnx"
+    "dotnet.defaultSolution": "mypicker3d.slnx",
+    "dotnet.preferCSharpExtension": true
 }
