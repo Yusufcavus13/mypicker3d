@@ -23,8 +23,7 @@ public static class LevelSkeletonCreator
 
         try
         {
-            LevelInfoManager info = contents.GetComponent<LevelInfoManager>();
-            if (info == null)
+            if (!contents.TryGetComponent(out LevelInfoManager info))
             {
                 Debug.LogError("[LevelSkeletonCreator] Kaynak prefabta LevelInfoManager yok.");
                 return;
@@ -54,8 +53,7 @@ public static class LevelSkeletonCreator
 
             Object.DestroyImmediate(info, true);
 
-            LevelBuilder builder = contents.GetComponent<LevelBuilder>();
-            if (builder == null)
+            if (!contents.TryGetComponent(out LevelBuilder builder))
                 builder = contents.AddComponent<LevelBuilder>();
 
             SerializedObject builderObject = new SerializedObject(builder);

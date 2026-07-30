@@ -97,8 +97,7 @@ public class RoadPlatform : MonoBehaviour
     {
         ball.localPosition = localPosition;
 
-        Rigidbody ballRb = ball.GetComponent<Rigidbody>();
-        if (ballRb == null)
+        if (!ball.TryGetComponent(out Rigidbody ballRb))
             return;
 
         ballRb.position = ball.position;

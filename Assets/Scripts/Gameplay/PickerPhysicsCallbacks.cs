@@ -11,7 +11,15 @@ public class PickerPhysicsCallbacks : MonoBehaviour
         if (other.gameObject.CompareTag("BallCollecter"))
         {
             other.gameObject.tag = "Untagged";
+
+            //GetComponentInParent'in Try- versiyonu yok, null kontrolu elle
             BallCollecterPlatform ballCollecterPlatform = other.gameObject.GetComponentInParent<BallCollecterPlatform>();
+            if (ballCollecterPlatform == null)
+            {
+                Debug.LogError($"[Picker] {other.name} uzerinde BallCollecterPlatform bulunamadi.", other);
+                return;
+            }
+
             ballCollecterPlatform.CheckCollecterStatus();
             other.gameObject.SetActive(false);
             hittedBallCollecterEvent?.Invoke();
@@ -21,16 +29,16 @@ public class PickerPhysicsCallbacks : MonoBehaviour
             other.gameObject.tag = "Untagged";
             hittedLevelEndEvent?.Invoke();
         }
-        if (other.gameObject.CompareTag("Ball"))
+        if (other.gameObject.CompareTag("Ball") && other.TryGetComponent(out Ball enteringBall))
         {
-            other.gameObject.GetComponent<Ball>().SetStatus(true);
+            enteringBall.SetStatus(true);
         }
     }
     private void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.CompareTag("Ball"))
+        if (other.gameObject.CompareTag("Ball") && other.TryGetComponent(out Ball exitingBall))
         {
-            other.gameObject.GetComponent<Ball>().SetStatus(false);
+            exitingBall.SetStatus(false);
         }
     }
 }

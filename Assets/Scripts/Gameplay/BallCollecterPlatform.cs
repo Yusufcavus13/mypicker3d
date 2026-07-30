@@ -67,11 +67,7 @@ public class BallCollecterPlatform : MonoBehaviour
 
         foreach (var b in collectedBalls)
         {
-            if (b == null)
-                continue;
-
-            Ball ball = b.GetComponent<Ball>();
-            if (ball != null)
+            if (b != null && b.TryGetComponent(out Ball ball))
                 ball.Explode(explodeMat);
         }
         if (collectedCount >= collectLimit)

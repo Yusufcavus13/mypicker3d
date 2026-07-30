@@ -106,9 +106,11 @@ public class LevelInfoManager : MonoBehaviour
         if (stages == null || stages.Count == 0)
             return;
 
-        Stage firstStage = stages[0] != null ? stages[0].GetComponent<Stage>() : null;
-        Stage lastStage = stages[stages.Count - 1] != null ? stages[stages.Count - 1].GetComponent<Stage>() : null;
-        if (firstStage == null || lastStage == null)
+        GameObject firstObj = stages[0];
+        GameObject lastObj = stages[stages.Count - 1];
+        if (firstObj == null || lastObj == null)
+            return;
+        if (!firstObj.TryGetComponent(out Stage firstStage) || !lastObj.TryGetComponent(out Stage lastStage))
             return;
 
         if (mpb == null)
@@ -135,7 +137,10 @@ public class LevelInfoManager : MonoBehaviour
         float endCubeZPos = 2.5f;
         foreach (var stage in stages)
         {
-            endCubeZPos += (stage.gameObject.GetComponent<Stage>().PlatformLength * 5f) + 5f;
+            if (stage == null || !stage.TryGetComponent(out Stage curStage))
+                continue;
+
+            endCubeZPos += (curStage.PlatformLength * 5f) + 5f;
         }
         endCube.transform.localPosition = new Vector3(endCube.transform.localPosition.x,
             endCube.transform.localPosition.y, endCubeZPos);
@@ -144,7 +149,8 @@ public class LevelInfoManager : MonoBehaviour
     {
         foreach (GameObject stage in stages)
         {
-            stage.GetComponent<Stage>().SetupStage();
+            if (stage != null && stage.TryGetComponent(out Stage curStage))
+                curStage.SetupStage();
         }
         CalcStagesPositions();
     }
@@ -153,7 +159,9 @@ public class LevelInfoManager : MonoBehaviour
         float lastPlatformLength = 0f;
         for (int i = 0; i < stages.Count; i++)
         {
-            Stage curStage = stages[i].GetComponent<Stage>();
+            if (stages[i] == null || !stages[i].TryGetComponent(out Stage curStage))
+                continue;
+
             if (i == 0)
             {
                 curStage.SetStagePosZ(0f);
@@ -172,13 +180,20 @@ public class LevelInfoManager : MonoBehaviour
         float levelLength = 0f;
         foreach (var s in stages)
         {
-            levelLength += (s.GetComponent<Stage>().PlatformLength * 5f) + 5f;
+            if (s == null || !s.TryGetComponent(out Stage curStage))
+                continue;
+
+            levelLength += (curStage.PlatformLength * 5f) + 5f;
         }
         return levelLength;
     }
     public Stage GetStage(int index)
     {
-        return stages[index].gameObject.GetComponent<Stage>();
+        if (index < 0 || index >= stages.Count || stages[index] == null)
+            return null;
+
+        stages[index].TryGetComponent(out Stage stage);
+        return stage;
     }
     private void OnEnable()
     {

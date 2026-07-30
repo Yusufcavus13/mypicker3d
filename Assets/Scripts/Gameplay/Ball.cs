@@ -18,15 +18,15 @@ public class Ball : MonoBehaviour
         if (explosionEfectPrefab != null)
         {
             GameObject spawnedEffectObj = Instantiate(explosionEfectPrefab, transform.position, Quaternion.identity);
-            ParticleSystemRenderer psr = spawnedEffectObj.GetComponent<ParticleSystemRenderer>();
-            if (psr == null)
+
+            //once objenin kendisinde ara, yoksa cocuklarina bak
+            if (!spawnedEffectObj.TryGetComponent(out ParticleSystemRenderer psr))
                 psr = spawnedEffectObj.GetComponentInChildren<ParticleSystemRenderer>();
 
             if (psr != null && platformMat != null)
                 psr.material = platformMat;
 
-            ParticleSystem particleSystem = spawnedEffectObj.GetComponent<ParticleSystem>();
-            if (particleSystem == null)
+            if (!spawnedEffectObj.TryGetComponent(out ParticleSystem particleSystem))
                 particleSystem = spawnedEffectObj.GetComponentInChildren<ParticleSystem>();
 
             particleSystem?.Play();

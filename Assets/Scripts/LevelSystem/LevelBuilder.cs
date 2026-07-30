@@ -34,8 +34,7 @@ public class LevelBuilder : MonoBehaviour
             GameObject stageObj = Instantiate(stagePrefab, stagesParent, false);
             stageObj.name = "Stage" + (i + 1);
 
-            Stage stage = stageObj.GetComponent<Stage>();
-            if (stage == null)
+            if (!stageObj.TryGetComponent(out Stage stage))
             {
                 Debug.LogError($"[LevelBuilder] {stagePrefab.name} uzerinde Stage bileseni yok.", this);
                 continue;

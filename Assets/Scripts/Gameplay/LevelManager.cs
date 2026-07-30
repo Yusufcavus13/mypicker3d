@@ -74,8 +74,7 @@ public class LevelManager : MonoBehaviour
         GameObject levelObj = Instantiate(levelSkeletonPrefab, position, Quaternion.identity, transform);
         levelObj.name = levelData.name;
 
-        LevelBuilder levelBuilder = levelObj.GetComponent<LevelBuilder>();
-        if (levelBuilder == null)
+        if (!levelObj.TryGetComponent(out LevelBuilder levelBuilder))
         {
             Debug.LogError($"[LevelManager] {levelSkeletonPrefab.name} uzerinde LevelBuilder yok.", this);
             return;
