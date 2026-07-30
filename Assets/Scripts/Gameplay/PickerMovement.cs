@@ -8,6 +8,11 @@ public class PickerMovement : MonoBehaviour
     [SerializeField] private float horiztontalSpeed = 10f;
     [SerializeField] private float verticalSpeed = 10f;
     [SerializeField] private float dragSensitivity = 3f;
+    //Yana hareketin ust hizi (birim/sn). Bu sinir olmadan oyuncu seridi bir
+    //karede kat ediyor ve toplarin nereye yayildigi hic onemli olmuyor.
+    //Oyunun zorlugunu belirleyen asil ayar bu.
+    //DIKKAT: RoadPlatform'daki pickerLateralSpeed ile ayni olmali.
+    [SerializeField] private float maxLateralSpeed = 9f;
     public static event Action movedToNextStartEvent;
 
     private bool canMove = false;
@@ -46,6 +51,10 @@ public class PickerMovement : MonoBehaviour
         // Sürükleme: zaten mesafe, olduğu gibi ekle
         horizontalMove += dragDelta;
         dragDelta = 0f;              // TÜKETTİK — sıfırla
+
+        // Yana hareketi hız sınırına kırp: şeridi anlık kat etmek mümkün olmasın
+        float maxStep = maxLateralSpeed * Time.fixedDeltaTime;
+        horizontalMove = Mathf.Clamp(horizontalMove, -maxStep, maxStep);
 
         float verticalMove = canRun ? verticalSpeed * Time.fixedDeltaTime : 0f;
 

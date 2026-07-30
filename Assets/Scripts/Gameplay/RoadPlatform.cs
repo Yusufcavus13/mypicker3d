@@ -10,13 +10,36 @@ public class RoadPlatform : MonoBehaviour
     [SerializeField] private Renderer platformRenderer;
     [SerializeField] private GameObject ballPrefab;
     [SerializeField] private Transform ballsParent;
-    [SerializeField] private float ballSpacing = 0.35f;    //gruptaki toplarin arasi (top capi 0.3)
-    [SerializeField] private float ballAreaPadding = 0.7f; //yolun onunde/arkasinda birakilan bosluk
+    [SerializeField] private float ballSpacing = 0.5f;     //gruptaki toplarin arasi
+    [SerializeField] private float ballAreaPadding = 0.7f; //yolun ONUNDE/ARKASINDA birakilan bosluk (z)
+    [SerializeField] private float ballEdgeMargin = 0.3f;  //duvarlara birakilan bosluk (x)
     [SerializeField] private int minGroupSize = 2;         //bir kumede en az kac top
     [SerializeField] private int maxGroupSize = 5;         //bir kumede en fazla kac top
     //Picker x ekseninde -1.5 / +1.5 arasinda hareket eder, agzinin yarisi da 0.76,
     //yani en fazla 2.26'ya uzanabilir. Yayilma bunu GECMEMELI, yoksa top toplanamaz.
     [SerializeField] private float ballSpreadWidth = 4f;
+    [SerializeField] private float bigBallScale = 2.2f;    //buyuk toplarin olcek carpani
+    [SerializeField] private int bigBallValue = 5;          //buyuk top kac top sayilir
+    [SerializeField] private Color normalBallColor = Color.black;
+    [SerializeField] private Color bigBallColor = new Color(1f, 0.72f, 0.1f); //altin: "degerli" demek
+    [SerializeField] private float ballPackingFactor = 0.75f; //yolun ne kadarina yayilsin (1 = tamami)
+
+    //Picker'in hizlari. Uretim bunlara bakarak "bu kumeye yetisilebilir mi"
+    //hesabi yapiyor; PickerMovement'taki degerlerle AYNI olmali.
+    [SerializeField] private float pickerForwardSpeed = 5f;
+    [SerializeField] private float pickerLateralSpeed = 9f;
+
+    private struct BallPlacement
+    {
+        public Vector3 localPosition;
+        public bool isBig;
+    }
+
+    private struct BallGroup
+    {
+        public int size;
+        public bool isBig;
+    }
 
     private static MaterialPropertyBlock mpb;
 
@@ -45,7 +68,7 @@ public class RoadPlatform : MonoBehaviour
              transform.localPosition.z + ((platformLength - 1f) * 2.5f));
 
     }
-    public void SpawnBalls(int amount)
+    public void SpawnBalls(int amount, int bigBallCount, float spreadWidthOverride)
     {
         //BallParent'i yolun merkezine hizaliyoruz; toplar bundan sonra LOCAL
         //konumla yerlestiriliyor, yani dunya koordinatina hic bakmiyoruz.
@@ -58,15 +81,15 @@ public class RoadPlatform : MonoBehaviour
             ballsParent.GetChild(i).gameObject.SetActive(false);
         }
 
-        List<Vector3> positions = BuildBallPositions(amount);
+        List<BallPlacement> placements = BuildBallPositions(amount, bigBallCount, spreadWidthOverride);
 
-        for (int i = 0; i < positions.Count; i++)
+        for (int i = 0; i < placements.Count; i++)
         {
             if (i < ballsParent.childCount)
             {
                 //var olan topu tekrar kullan
                 ballsParent.GetChild(i).gameObject.SetActive(true);
-                PlaceBall(ballsParent.GetChild(i), positions[i]);
+                PlaceBall(ballsParent.GetChild(i), placements[i]);
             }
             else
             {
@@ -80,7 +103,7 @@ public class RoadPlatform : MonoBehaviour
                 GameObject spawnedBall = Instantiate(ballPrefab);
 #endif
                 spawnedBall.transform.SetParent(ballsParent, false);
-                PlaceBall(spawnedBall.transform, positions[i]);
+                PlaceBall(spawnedBall.transform, placements[i]);
             }
         }
 
@@ -93,9 +116,19 @@ public class RoadPlatform : MonoBehaviour
     //Rigidbody'nin pozu transform'dan ayri tutulur. Sadece transform'u yazarsak
     //fizik motoru topu bir sonraki adimda eski yerine geri cekiyor; bu yuzden
     //Rigidbody'yi de elle hizaliyor ve birikmis hizi sifirliyoruz.
-    private void PlaceBall(Transform ball, Vector3 localPosition)
+    private void PlaceBall(Transform ball, BallPlacement placement)
     {
-        ball.localPosition = localPosition;
+        ball.localPosition = placement.localPosition;
+
+        //olcek, renk ve deger her seferinde YAZILIR: havuzdan gelen top onceki
+        //kullanimindan buyuk ya da altin renkli kalmis olabilir
+        Vector3 baseScale = ballPrefab.transform.localScale;
+        ball.localScale = placement.isBig ? baseScale * bigBallScale : baseScale;
+
+        SetBallColor(ball, placement.isBig ? bigBallColor : normalBallColor);
+
+        if (ball.TryGetComponent(out Ball ballComponent))
+            ballComponent.SetValue(placement.isBig ? bigBallValue : 1);
 
         if (!ball.TryGetComponent(out Rigidbody ballRb))
             return;
@@ -106,57 +139,107 @@ public class RoadPlatform : MonoBehaviour
         ballRb.angularVelocity = Vector3.zero;
     }
 
+    //Topun rengini MaterialPropertyBlock ile veriyoruz: yeni materyal uretmeden,
+    //tek tek topa ozel renk. Platformlarda da ayni yontem kullaniliyor.
+    private void SetBallColor(Transform ball, Color color)
+    {
+        if (!ball.TryGetComponent(out Renderer ballRenderer))
+            return;
+        if (mpb == null)
+            mpb = new MaterialPropertyBlock();
+
+        ballRenderer.GetPropertyBlock(mpb);
+        //_AlbedoColor = MK Toon shader'inin ana renk ozelligi
+        mpb.SetColor("_AlbedoColor", color);
+        mpb.SetColor("_BaseColor", color);
+        mpb.SetColor("_Color", color);
+        ballRenderer.SetPropertyBlock(mpb);
+    }
+
     //Toplari 2-5'lik kucuk kumelere bolup yol boyunca serpiyoruz. Her kume
     //rastgele bir sekil (dik dizi, yan dizi, kucuk blok) ve rastgele bir yan
     //konum aliyor; boylece her level farkli bir dagilimla cikiyor.
-    private List<Vector3> BuildBallPositions(int amount)
+    private List<BallPlacement> BuildBallPositions(int amount, int bigBallCount, float spreadWidthOverride)
     {
-        List<Vector3> positions = new List<Vector3>(Mathf.Max(0, amount));
+        List<BallPlacement> positions = new List<BallPlacement>(Mathf.Max(0, amount));
         if (amount <= 0)
             return positions;
 
         Vector2 roadSize = GetRoadSize();
 
-        float halfSpread = Mathf.Min(ballSpreadWidth * 0.5f, Mathf.Max(0f, (roadSize.x * 0.5f) - ballAreaPadding));
-        float halfLength = Mathf.Max(0f, (roadSize.y * 0.5f) - ballAreaPadding);
+        //durak kendi yayilma genisligini soyleyebilir; 0 ise RoadPlatform'un varsayilani
+        float spread = spreadWidthOverride > 0f ? spreadWidthOverride : ballSpreadWidth;
+        int bigRemaining = Mathf.Clamp(bigBallCount, 0, amount);
 
-        List<int> groupSizes = SplitIntoGroups(amount);
+        //X'te tavan duvar, Z'de tavan yolun uzunlugu. Ayri marj kullanmak sart:
+        //ikisine ayni padding'i verirsek yayilma ayari tavana carpip etkisiz kaliyor.
+        float halfSpread = Mathf.Min(spread * 0.5f, Mathf.Max(0f, (roadSize.x * 0.5f) - ballEdgeMargin));
+        float halfLength = Mathf.Max(0f, (roadSize.y * 0.5f) - ballAreaPadding) * Mathf.Clamp01(ballPackingFactor);
+
+        List<BallGroup> groups = SplitIntoGroups(amount, bigRemaining);
 
         //her kumeye yol boyunca esit bir dilim ayirip dilimin icinde oynatiyoruz
-        float slot = (halfLength * 2f) / groupSizes.Count;
+        float slot = (halfLength * 2f) / groups.Count;
+        float baseDiameter = ballPrefab != null ? ballPrefab.transform.localScale.x : 0.3f;
 
-        for (int g = 0; g < groupSizes.Count; g++)
+        float previousCenterX = 0f;
+        float previousCenterZ = -halfLength - (pickerForwardSpeed * 0.5f); //picker yola girmeden once ortada
+
+        for (int g = 0; g < groups.Count; g++)
         {
-            int size = groupSizes[g];
+            BallGroup group = groups[g];
+            int size = group.size;
+
+            //bu kumedeki toplarin capi: buyuk toplar cok daha genis yer kapliyor
+            float ballDiameter = baseDiameter * (group.isBig ? bigBallScale : 1f);
+            float ballRadius = ballDiameter * 0.5f;
+            float spacing = Mathf.Max(ballSpacing, ballDiameter + 0.05f);
 
             //kume dilimine kac sira sigiyorsa o kadar derin olsun, kalani yana
             //dagilsin; boylece kalabalik levellerde kumeler ust uste binmez
-            int maxRows = Mathf.Max(1, Mathf.FloorToInt(Mathf.Max(0f, slot - ballSpacing) / ballSpacing) + 1);
+            int maxRows = Mathf.Max(1, Mathf.FloorToInt(Mathf.Max(0f, slot - spacing) / spacing) + 1);
             int minColumns = Mathf.Clamp(Mathf.CeilToInt(size / (float)maxRows), 1, size);
             int columns = Mathf.Clamp(Random.Range(minColumns, Mathf.Max(minColumns, 3) + 1), 1, size);
             int rows = Mathf.CeilToInt(size / (float)columns);
 
-            float groupHalfWidth = (columns - 1) * ballSpacing * 0.5f;
-            float groupHalfDepth = (rows - 1) * ballSpacing * 0.5f;
+            float groupHalfWidth = (columns - 1) * spacing * 0.5f;
+            float groupHalfDepth = (rows - 1) * spacing * 0.5f;
 
             //kume yolun disina ve picker'in erisemeyecegi yere tasmasin.
             //Tek tek toplari degil KUMEYI sigdiriyoruz, yoksa uctaki toplar
             //ayni noktaya kirpilip ust uste binerdi.
-            float limitX = Mathf.Max(0f, halfSpread - groupHalfWidth);
-            float centerX = Random.Range(-limitX, limitX);
+            float limitX = Mathf.Max(0f, halfSpread - groupHalfWidth - ballRadius);
 
-            //dilimin kenarinda bir top capi pay: yan yana dusen kumeler carpismasin
+            //dilimin kenarinda topun yaricapi kadar pay: yan yana dusen kumeler carpismasin
             float slotCenter = -halfLength + (slot * (g + 0.5f));
-            float slotPlay = Mathf.Max(0f, (slot * 0.5f) - groupHalfDepth - (ballSpacing * 0.5f));
-            float limitZ = Mathf.Max(0f, halfLength - groupHalfDepth);
+            float slotPlay = Mathf.Max(0f, (slot * 0.5f) - groupHalfDepth - ballRadius);
+            float limitZ = Mathf.Max(0f, halfLength - groupHalfDepth - ballRadius);
             float centerZ = Mathf.Clamp(slotCenter + Random.Range(-slotPlay, slotPlay), -limitZ, limitZ);
+
+            //ERISILEBILIRLIK: picker onceki kumeden buraya gelirken ne kadar yol
+            //alabilir? Kumeyi o pencerenin icine kirpiyoruz, boylece hicbir top
+            //"sansa bagli olarak" ulasilamaz hale gelmiyor. Zorluk sikilıktan gelir.
+            float forwardGap = Mathf.Max(0.01f, centerZ - previousCenterZ);
+            float travelWindow = pickerLateralSpeed * (forwardGap / Mathf.Max(0.01f, pickerForwardSpeed));
+            float minX = Mathf.Max(-limitX, previousCenterX - travelWindow);
+            float maxX = Mathf.Min(limitX, previousCenterX + travelWindow);
+            float centerX = minX <= maxX
+                ? Random.Range(minX, maxX)
+                : Mathf.Clamp(previousCenterX, -limitX, limitX);
+
+            previousCenterX = centerX;
+            previousCenterZ = centerZ;
 
             for (int i = 0; i < size; i++)
             {
-                positions.Add(new Vector3(
-                    centerX + (((i % columns) - ((columns - 1) * 0.5f)) * ballSpacing),
-                    0f,
-                    centerZ + (((i / columns) - ((rows - 1) * 0.5f)) * ballSpacing)));
+                positions.Add(new BallPlacement
+                {
+                    localPosition = new Vector3(
+                        centerX + (((i % columns) - ((columns - 1) * 0.5f)) * spacing),
+                        0f,
+                        centerZ + (((i / columns) - ((rows - 1) * 0.5f)) * spacing)),
+                    isBig = group.isBig
+                });
             }
         }
 
@@ -179,12 +262,19 @@ public class RoadPlatform : MonoBehaviour
         return new Vector2(cubeScale.x * roadScale.x, cubeScale.z * roadScale.z);
     }
 
-    private List<int> SplitIntoGroups(int amount)
+    //Buyuk toplar KENDI BASINA kume oluyor: 2.2 kat buyuk olduklari icin baska
+    //bir topla ayni kumede yan yana gelirlerse ic ice girerler.
+    private List<BallGroup> SplitIntoGroups(int amount, int bigBallCount)
     {
-        List<int> groupSizes = new List<int>();
+        List<BallGroup> groups = new List<BallGroup>();
+
+        int bigCount = Mathf.Clamp(bigBallCount, 0, amount);
+        for (int i = 0; i < bigCount; i++)
+            groups.Add(new BallGroup { size = 1, isBig = true });
+
         int minSize = Mathf.Max(1, minGroupSize);
         int maxSize = Mathf.Max(minSize, maxGroupSize);
-        int remaining = amount;
+        int remaining = amount - bigCount;
 
         while (remaining > 0)
         {
@@ -192,10 +282,17 @@ public class RoadPlatform : MonoBehaviour
             if (remaining - size < minSize) //geride tek basina kalan top olmasin
                 size = remaining;
 
-            groupSizes.Add(size);
+            groups.Add(new BallGroup { size = size, isBig = false });
             remaining -= size;
         }
 
-        return groupSizes;
+        //buyuk toplar hep yolun basinda toplanmasin
+        for (int i = groups.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (groups[i], groups[j]) = (groups[j], groups[i]);
+        }
+
+        return groups;
     }
 }

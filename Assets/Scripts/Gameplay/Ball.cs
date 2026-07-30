@@ -7,6 +7,17 @@ public class Ball : MonoBehaviour
     [SerializeField] private float forcePower = 7f;
     [SerializeField] private float upwardRatio = 3f; //ileri bilesene gore yukari bilesen
     private bool isInside = false;
+    private int value = 1;
+
+    public int Value
+    {
+        get { return value; }
+    }
+
+    public void SetValue(int newValue)
+    {
+        value = Mathf.Max(1, newValue);
+    }
 
     public void SetStatus(bool _isInside)
     {

@@ -14,10 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   stages:
   - spawnedBallCount: 12
-    targetBallCount: 6
+    targetBallCount: 9
     platformColor: {r: 0.82484215, g: 1, b: 0, a: 1}
     platformLength: 4
+    bigBallCount: 0
+    ballSpreadWidth: 3.6
   - spawnedBallCount: 15
-    targetBallCount: 9
+    targetBallCount: 14
     platformColor: {r: 0.827451, g: 1, b: 0, a: 1}
     platformLength: 4
+    bigBallCount: 1
+    ballSpreadWidth: 3.8

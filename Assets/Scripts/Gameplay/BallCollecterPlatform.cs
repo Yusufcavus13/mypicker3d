@@ -18,7 +18,13 @@ public class BallCollecterPlatform : MonoBehaviour
     public void CollactNewBall(GameObject ballObj)
     {
         collectedBalls.Add(ballObj);
-        collectedCount++;
+
+        //buyuk toplar birden fazla sayar
+        int ballValue = 1;
+        if (ballObj.TryGetComponent(out Ball ball))
+            ballValue = ball.Value;
+
+        collectedCount += ballValue;
         SetCollectedText(collectedCount.ToString() + " / " + collectLimit.ToString());
     }
     public void SetCollectLimit(int newLimit)
