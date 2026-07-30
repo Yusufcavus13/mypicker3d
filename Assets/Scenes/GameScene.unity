@@ -1128,12 +1128,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad65e222cc367164c98fbb36212393e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  levelPrefabs:
-  - {fileID: 1169397084924390200, guid: 3d170e38cad8213488d3edbc430ec0ba, type: 3}
-  - {fileID: 6054407098870905235, guid: 4f4e1ca2a6d584abebcece0bc7232907, type: 3}
-  - {fileID: 52780046969652462, guid: eb717993bac264f0eaf4701ea1dd188f, type: 3}
-  - {fileID: 5239596133376175198, guid: da2e0806a1da04004be6af06a11473d2, type: 3}
-  - {fileID: 7525301302419092042, guid: d4ae3f6bbfe6640ef9ab90156165c2f8, type: 3}
+  levelSkeletonPrefab: {fileID: 5059883698500206131, guid: 6704896289a2f487386ace2f828af56f,
+    type: 3}
+  levels:
+  - {fileID: 11400000, guid: be594818075ff48b0976fa1215af14b5, type: 2}
+  - {fileID: 11400000, guid: 9bf6e85cd104449de890b37a7bcd440e, type: 2}
+  - {fileID: 11400000, guid: 13cded7d9c59c4d51bdacf60e17217f4, type: 2}
+  - {fileID: 11400000, guid: 5258013b88e5a4c18b9abff2602c35fb, type: 2}
+  - {fileID: 11400000, guid: 72518a8f8780d43a8b5281e02cc49607, type: 2}
 --- !u!1 &617854284
 GameObject:
   m_ObjectHideFlags: 0
