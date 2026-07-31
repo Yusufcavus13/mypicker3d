@@ -11,6 +11,8 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject winMenu;
     [SerializeField] private GameObject failMenu;
     [SerializeField] private Text levelText;
+    [SerializeField] private Text levelCompleteText;
+    [SerializeField] private float levelCompleteHoldTime = 1.1f;
     [SerializeField] private GameManager gameManager;
 
     //Sahne basarisizlikta yeniden yukleniyor. Ana menu her yuklemede degil,
@@ -19,6 +21,8 @@ public class UIManager : MonoBehaviour
     private static bool mainMenuShown;
 
     private Tween levelTextTween;
+    private Tween bannerTween;
+    private Coroutine levelCompleteRoutine;
 
     private void Start()
     {
@@ -71,18 +75,53 @@ public class UIManager : MonoBehaviour
         gameEndMenu.SetActive(true);
     }
 
-    //Level bitti ama oyun devam ediyor: menu ACMIYORUZ. Kutlama, yazinin
-    //kisa bir animasyonu ve kameranin sarsintisiyla veriliyor.
+    //Level bitti ama oyun devam ediyor: menu ACMIYORUZ. Kutlama, kisa sureli
+    //bir yazi ve kameranin sarsintisiyla veriliyor.
     private void OnLevelCompleted()
     {
         UpdateLevelText();
 
-        if (levelText == null)
+        if (levelText != null)
+        {
+            levelTextTween?.Kill(true);
+            levelTextTween = levelText.transform
+                .DOPunchScale(Vector3.one * 0.45f, 0.55f, 5, 0.6f);
+        }
+
+        ShowLevelCompleteBanner();
+    }
+
+    private void ShowLevelCompleteBanner()
+    {
+        if (levelCompleteText == null)
             return;
 
-        levelTextTween?.Kill(true);
-        levelTextTween = levelText.transform
-            .DOPunchScale(Vector3.one * 0.45f, 0.55f, 5, 0.6f);
+        //ust uste level bitirilirse onceki gosterim yarida kalsin
+        if (levelCompleteRoutine != null)
+            StopCoroutine(levelCompleteRoutine);
+
+        levelCompleteRoutine = StartCoroutine(LevelCompleteBannerRoutine());
+    }
+
+    private IEnumerator LevelCompleteBannerRoutine()
+    {
+        Transform banner = levelCompleteText.transform;
+
+        levelCompleteText.gameObject.SetActive(true);
+        banner.localScale = Vector3.zero;
+
+        bannerTween?.Kill(true);
+        //OutBack: hedefi bir miktar asip geri oturuyor, "zipladi" hissi veriyor
+        bannerTween = banner.DOScale(1f, 0.35f).SetEase(Ease.OutBack).SetUpdate(true);
+
+        //agir cekim sirasinda bekleme uzamasin
+        yield return new WaitForSecondsRealtime(levelCompleteHoldTime);
+
+        bannerTween?.Kill(true);
+        bannerTween = banner.DOScale(0f, 0.22f).SetEase(Ease.InBack).SetUpdate(true)
+            .OnComplete(() => levelCompleteText.gameObject.SetActive(false));
+
+        levelCompleteRoutine = null;
     }
 
     private void OpenFailUI()
