@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class UIManager : MonoBehaviour
 {
@@ -16,6 +17,8 @@ public class UIManager : MonoBehaviour
     //sadece uygulama ilk acildiginda cikmali - static alan sahne yuklemeleri
     //arasinda yasadigi icin bayrak gorevi goruyor.
     private static bool mainMenuShown;
+
+    private Tween levelTextTween;
 
     private void Start()
     {
@@ -68,10 +71,18 @@ public class UIManager : MonoBehaviour
         gameEndMenu.SetActive(true);
     }
 
-    //Level bitti ama oyun devam ediyor: menu ACMIYORUZ, sadece sayaci guncelliyoruz.
+    //Level bitti ama oyun devam ediyor: menu ACMIYORUZ. Kutlama, yazinin
+    //kisa bir animasyonu ve kameranin sarsintisiyla veriliyor.
     private void OnLevelCompleted()
     {
         UpdateLevelText();
+
+        if (levelText == null)
+            return;
+
+        levelTextTween?.Kill(true);
+        levelTextTween = levelText.transform
+            .DOPunchScale(Vector3.one * 0.45f, 0.55f, 5, 0.6f);
     }
 
     private void OpenFailUI()

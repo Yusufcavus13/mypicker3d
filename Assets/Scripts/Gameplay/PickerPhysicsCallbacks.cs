@@ -22,6 +22,10 @@ public class PickerPhysicsCallbacks : MonoBehaviour
 
             ballCollecterPlatform.CheckCollecterStatus();
             other.gameObject.SetActive(false);
+
+            //carpma ani: kisa agir cekim + titresim (kamera sarsintisi olaya abone)
+            GameFeel.Instance.Hit();
+
             hittedBallCollecterEvent?.Invoke();
         }
         if (other.gameObject.CompareTag("LevelEnd"))

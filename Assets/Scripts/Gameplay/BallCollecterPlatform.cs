@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using DG.Tweening;
 public class BallCollecterPlatform : MonoBehaviour
 {
     [SerializeField]  TMP_Text collecedStatusText;
@@ -25,11 +26,36 @@ public class BallCollecterPlatform : MonoBehaviour
             ballValue = ball.Value;
 
         collectedCount += ballValue;
-        SetCollectedText(collectedCount.ToString() + " / " + collectLimit.ToString());
+        AnimateCounter(collectedCount);
+    }
+
+    private int displayedCount;
+    private Tween countTween;
+    private Tween punchTween;
+
+    //Sayac aniden ziplamak yerine sayarak cikiyor, yazi da bir "punch" atiyor.
+    //Toplar seri halde geldigi icin onceki tween'leri OLDURMEK sart: yoksa
+    //ust uste binip yaziyi buyutup birakirlar.
+    private void AnimateCounter(int newCount)
+    {
+        if (collecedStatusText == null)
+            return;
+
+        countTween?.Kill();
+        countTween = DOTween.To(() => displayedCount, value =>
+        {
+            displayedCount = value;
+            SetCollectedText(value + " / " + collectLimit);
+        }, newCount, 0.25f).SetEase(Ease.OutQuad);
+
+        punchTween?.Kill(true);
+        punchTween = collecedStatusText.transform
+            .DOPunchScale(Vector3.one * 0.22f, 0.18f, 6, 0.7f);
     }
     public void SetCollectLimit(int newLimit)
     {
         collectLimit = newLimit;
+        displayedCount = 0;
     }
     public void SetCollectedText(string text)
     {

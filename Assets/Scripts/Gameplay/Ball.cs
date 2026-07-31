@@ -26,23 +26,9 @@ public class Ball : MonoBehaviour
     
     public void Explode(Material platformMat)
     {
-        if (explosionEfectPrefab != null)
-        {
-            GameObject spawnedEffectObj = Instantiate(explosionEfectPrefab, transform.position, Quaternion.identity);
-
-            //once objenin kendisinde ara, yoksa cocuklarina bak
-            if (!spawnedEffectObj.TryGetComponent(out ParticleSystemRenderer psr))
-                psr = spawnedEffectObj.GetComponentInChildren<ParticleSystemRenderer>();
-
-            if (psr != null && platformMat != null)
-                psr.material = platformMat;
-
-            if (!spawnedEffectObj.TryGetComponent(out ParticleSystem particleSystem))
-                particleSystem = spawnedEffectObj.GetComponentInChildren<ParticleSystem>();
-
-            particleSystem?.Play();
-            Destroy(spawnedEffectObj, 3f);
-        }
+        //Efekt artik havuzdan geliyor: bir toplayici bosalinca 15 tane
+        //Instantiate + 15 Destroy yerine sifir tahsis.
+        ExplosionEffectPool.Instance.Play(explosionEfectPrefab, transform.position, platformMat);
 
         SoundManager.Instance?.PlayPop();
 
@@ -67,6 +53,11 @@ public class Ball : MonoBehaviour
 
     private void OnEnable()
     {
+        //Havuz level kurulurken hazirlansin: ilk patlama anina denk gelmesin.
+        //EnsurePool ilkinden sonra hemen donuyor, tekrar maliyeti yok.
+        if (explosionEfectPrefab != null && Application.isPlaying)
+            ExplosionEffectPool.Instance.Prepare(explosionEfectPrefab);
+
         PickerPhysicsCallbacks.hittedBallCollecterEvent += CheckIsInside;
     }
     private void OnDisable()
