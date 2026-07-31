@@ -5,14 +5,11 @@ using DG.Tweening;
 public class PickerMovement : MonoBehaviour
 {
     [SerializeField] private Rigidbody myRb;
+    //Hiz ve olculer artik burada degil: RoadPlatform da ayni sayilara ihtiyac
+    //duydugu icin ortak bir varlikta tutuluyor.
+    [SerializeField] private PickerSettings settings;
     [SerializeField] private float horiztontalSpeed = 10f;
-    [SerializeField] private float verticalSpeed = 10f;
     [SerializeField] private float dragSensitivity = 3f;
-    //Yana hareketin ust hizi (birim/sn). Bu sinir olmadan oyuncu seridi bir
-    //karede kat ediyor ve toplarin nereye yayildigi hic onemli olmuyor.
-    //Oyunun zorlugunu belirleyen asil ayar bu.
-    //DIKKAT: RoadPlatform'daki pickerLateralSpeed ile ayni olmali.
-    [SerializeField] private float maxLateralSpeed = 9f;
 
     [Header("Engel carpismasi")]
     //Picker'in Rigidbody'si kinematic, yani hicbir collider onu durduramaz.
@@ -29,6 +26,15 @@ public class PickerMovement : MonoBehaviour
     private float keyboardInput;   // -1 / 0 / +1  (yön)
     private float dragDelta;       // birikmiş sürükleme (mesafe)
     private Vector3 mousePosition;
+
+    private void Awake()
+    {
+        if (settings == null)
+        {
+            Debug.LogError("[PickerMovement] PickerSettings atanmamis, varsayilanlar kullaniliyor.", this);
+            settings = ScriptableObject.CreateInstance<PickerSettings>();
+        }
+    }
 
     private void Update()
     {
@@ -62,10 +68,10 @@ public class PickerMovement : MonoBehaviour
         dragDelta = 0f;              // TÜKETTİK — sıfırla
 
         // Yana hareketi hız sınırına kırp: şeridi anlık kat etmek mümkün olmasın
-        float maxStep = maxLateralSpeed * Time.fixedDeltaTime;
+        float maxStep = settings.lateralSpeed * Time.fixedDeltaTime;
         horizontalMove = Mathf.Clamp(horizontalMove, -maxStep, maxStep);
 
-        float verticalMove = canRun ? verticalSpeed * Time.fixedDeltaTime : 0f;
+        float verticalMove = canRun ? settings.forwardSpeed * Time.fixedDeltaTime : 0f;
 
         // Engel varsa ileri gitme; oyuncu yana kayarak bosluga gecmek zorunda
         if (verticalMove > 0f && IsObstacleAhead(myRb.position, horizontalMove))
@@ -73,7 +79,7 @@ public class PickerMovement : MonoBehaviour
 
         Vector3 pos = myRb.position;     // transform.position DEĞİL
         myRb.MovePosition(new Vector3(
-            Mathf.Clamp(pos.x + horizontalMove, -1.5f, 1.5f),
+            Mathf.Clamp(pos.x + horizontalMove, -settings.laneLimit, settings.laneLimit),
             pos.y,
             pos.z + verticalMove));
     }

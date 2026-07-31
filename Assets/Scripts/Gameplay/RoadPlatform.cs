@@ -15,8 +15,8 @@ public class RoadPlatform : MonoBehaviour
     [SerializeField] private float ballEdgeMargin = 0.3f;  //duvarlara birakilan bosluk (x)
     [SerializeField] private int minGroupSize = 2;         //bir kumede en az kac top
     [SerializeField] private int maxGroupSize = 5;         //bir kumede en fazla kac top
-    //Picker x ekseninde -1.5 / +1.5 arasinda hareket eder, agzinin yarisi da 0.76,
-    //yani en fazla 2.26'ya uzanabilir. Yayilma bunu GECMEMELI, yoksa top toplanamaz.
+    //Picker x ekseninde laneLimit kadar hareket eder, agzinin yarisi da 0.76,
+    //yani en fazla laneLimit + 0.76'ya uzanabilir. Yayilma bunu GECMEMELI.
     [SerializeField] private float ballSpreadWidth = 4f;
     [SerializeField] private float bigBallScale = 2.2f;    //buyuk toplarin olcek carpani
     [SerializeField] private int bigBallValue = 5;          //buyuk top kac top sayilir
@@ -24,10 +24,6 @@ public class RoadPlatform : MonoBehaviour
     [SerializeField] private Color bigBallColor = new Color(1f, 0.72f, 0.1f); //altin: "degerli" demek
     [SerializeField] private float ballPackingFactor = 0.75f; //yolun ne kadarina yayilsin (1 = tamami)
 
-    //Picker'in hizlari. Uretim bunlara bakarak "bu kumeye yetisilebilir mi"
-    //hesabi yapiyor; PickerMovement'taki degerlerle AYNI olmali.
-    [SerializeField] private float pickerForwardSpeed = 5f;
-    [SerializeField] private float pickerLateralSpeed = 9f;
 
     private struct BallPlacement
     {
@@ -43,9 +39,9 @@ public class RoadPlatform : MonoBehaviour
     //Duvarlar x = +-2.443'te ve 0.1 kalinliginda. Bu pay olmadan engelin dis
     //kenari duvarin icine giriyor ve gomulu gorunuyor.
     [SerializeField] private float obstacleWallInset = 0.2f;
-    //Picker'in yarim genisligi (kollar +-0.95). Engelin yanindan gecebilmesi
-    //icin gereken bosluk bununla hesaplaniyor.
-    [SerializeField] private float pickerHalfWidth = 0.95f;
+    //Picker olculeri PickerMovement ile ORTAK: ayri tutuldugunda birini
+    //degistirip digerini unutmak oyunu sessizce adaletsiz yapiyordu.
+    [SerializeField] private PickerSettings pickerSettings;
 
     private struct BallGroup
     {
@@ -290,7 +286,7 @@ public class RoadPlatform : MonoBehaviour
         float baseDiameter = ballPrefab != null ? ballPrefab.transform.localScale.x : 0.3f;
 
         float previousCenterX = 0f;
-        float previousCenterZ = -halfLength - (pickerForwardSpeed * 0.5f); //picker yola girmeden once ortada
+        float previousCenterZ = -halfLength - (Settings.forwardSpeed * 0.5f); //picker yola girmeden once ortada
 
         for (int g = 0; g < slots.Count; g++)
         {
@@ -336,7 +332,7 @@ public class RoadPlatform : MonoBehaviour
             //alabilir? Kumeyi o pencerenin icine kirpiyoruz, boylece hicbir top
             //"sansa bagli olarak" ulasilamaz hale gelmiyor. Zorluk sikilıktan gelir.
             float forwardGap = Mathf.Max(0.01f, centerZ - previousCenterZ);
-            float travelWindow = pickerLateralSpeed * (forwardGap / Mathf.Max(0.01f, pickerForwardSpeed));
+            float travelWindow = Settings.lateralSpeed * (forwardGap / Mathf.Max(0.01f, Settings.forwardSpeed));
             float minX = Mathf.Max(-limitX, previousCenterX - travelWindow);
             float maxX = Mathf.Min(limitX, previousCenterX + travelWindow);
             float centerX = minX <= maxX
@@ -387,16 +383,16 @@ public class RoadPlatform : MonoBehaviour
     {
         //duvarin ic yuzu: engel buraya yaslanacak, icine gommeyecek
         float roadHalfWidth = (roadSize.x * 0.5f) - obstacleWallInset;
-        float width = Mathf.Min(obstacleWidth, Mathf.Max(0.2f, (roadHalfWidth * 2f) - (pickerHalfWidth * 2f) - 0.2f));
+        float width = Mathf.Min(obstacleWidth, Mathf.Max(0.2f, (roadHalfWidth * 2f) - (Settings.halfWidth * 2f) - 0.2f));
 
         //duvara yasli engelin ic kenari
         float innerEdge = onLeft ? -roadHalfWidth + width : roadHalfWidth - width;
 
         //picker'in merkezi bu araliktan gecebilir
-        float gapMin = onLeft ? innerEdge + pickerHalfWidth : -pickerLaneLimit;
-        float gapMax = onLeft ? pickerLaneLimit : innerEdge - pickerHalfWidth;
-        gapMin = Mathf.Max(gapMin, -pickerLaneLimit);
-        gapMax = Mathf.Min(gapMax, pickerLaneLimit);
+        float gapMin = onLeft ? innerEdge + Settings.halfWidth : -Settings.laneLimit;
+        float gapMax = onLeft ? Settings.laneLimit : innerEdge - Settings.halfWidth;
+        gapMin = Mathf.Max(gapMin, -Settings.laneLimit);
+        gapMax = Mathf.Min(gapMax, Settings.laneLimit);
 
         //Bosluk kapaniyorsa engel bu yola sigmiyor: hic koymuyoruz.
         //Sessizce gecmek yerine kaydediyorum ki tasarimda fark edilsin.
@@ -408,7 +404,7 @@ public class RoadPlatform : MonoBehaviour
 
         //picker onceki duraktan buraya ne kadar yana gidebilir
         float forwardGap = Mathf.Max(0.01f, slotCenterZ - previousCenterZ);
-        float travelWindow = pickerLateralSpeed * (forwardGap / Mathf.Max(0.01f, pickerForwardSpeed));
+        float travelWindow = Settings.lateralSpeed * (forwardGap / Mathf.Max(0.01f, Settings.forwardSpeed));
 
         float reachMin = Mathf.Max(gapMin, previousCenterX - travelWindow);
         float reachMax = Mathf.Min(gapMax, previousCenterX + travelWindow);
@@ -430,8 +426,19 @@ public class RoadPlatform : MonoBehaviour
         previousCenterZ = slotCenterZ;
     }
 
-    //Picker x ekseninde -1.5 / +1.5 arasinda hareket ediyor (PickerMovement'taki clamp).
-    private const float pickerLaneLimit = 1.5f;
+    //PickerSettings atanmamissa oyun cokmesin: varsayilanlarla devam.
+    private PickerSettings Settings
+    {
+        get
+        {
+            if (pickerSettings == null)
+            {
+                Debug.LogError($"[RoadPlatform] {name}: PickerSettings atanmamis, varsayilanlar kullaniliyor.", this);
+                pickerSettings = ScriptableObject.CreateInstance<PickerSettings>();
+            }
+            return pickerSettings;
+        }
+    }
 
     //Duraklari hazirla: top kumeleri + engeller, karisik sirada.
     private List<SlotItem> BuildSlots(int amount, int bigBallCount, int obstacleCount)

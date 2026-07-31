@@ -1772,6 +1772,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetTransform: {fileID: 2039793843}
   followSpeed: 5
+  impactShakeStrength: 0.18
+  impactShakeDuration: 0.25
+  levelCompleteShakeStrength: 0.1
+  levelCompleteShakeDuration: 0.4
 --- !u!4 &956415612
 Transform:
   m_ObjectHideFlags: 0
@@ -2905,9 +2909,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   myRb: {fileID: 2039793845}
+  settings: {fileID: 11400000, guid: 0d1c73c3d3afd447aab36b71be82240b, type: 2}
   horiztontalSpeed: 100
-  verticalSpeed: 5
   dragSensitivity: 4
+  blockCheckSize: {x: 1.9, y: 1, z: 0.4}
+  blockCheckForwardOffset: 0.9
 --- !u!54 &2039793845
 Rigidbody:
   m_ObjectHideFlags: 0

@@ -62,15 +62,13 @@ MonoBehaviour:
   normalBallColor: {r: 0, g: 0, b: 0, a: 1}
   bigBallColor: {r: 1, g: 0.72, b: 0.1, a: 1}
   ballPackingFactor: 0.75
-  pickerForwardSpeed: 5
-  pickerLateralSpeed: 9
   obstaclePrefab: {fileID: 8338630158412080405, guid: c8a1b61e392f94899ae76b30f983c449,
     type: 3}
   obstaclesParent: {fileID: 0}
   obstacleWidth: 1.6
   obstacleHeight: 1.2
-  obstacleDepth: 0.6
-  pickerHalfWidth: 0.95
+  obstacleWallInset: 0.2
+  pickerSettings: {fileID: 11400000, guid: 0d1c73c3d3afd447aab36b71be82240b, type: 2}
 --- !u!1 &4825268876542655917
 GameObject:
   m_ObjectHideFlags: 0

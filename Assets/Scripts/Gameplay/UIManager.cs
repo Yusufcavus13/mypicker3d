@@ -90,26 +90,6 @@ public class UIManager : MonoBehaviour
         gameEndMenu.SetActive(true);
         winMenu.SetActive(false);
         failMenu.SetActive(true);
-        HideFailStatusImage();
-        StartCoroutine(KeepFailStatusImageHidden());
-    }
-
-    private void HideFailStatusImage()
-    {
-        if (failMenu == null)
-            return;
-        var status = failMenu.transform.Find("StatusImg");
-        if (status != null)
-            status.gameObject.SetActive(false);
-    }
-
-    private IEnumerator KeepFailStatusImageHidden()
-    {
-        for (var i = 0; i < 90; i++)
-        {
-            HideFailStatusImage();
-            yield return null;  // animasyonun aktifleştirdiği statusImg bu kod ile kapatılıyor.
-        }
     }
     private void UpdateLevelText()
     {
